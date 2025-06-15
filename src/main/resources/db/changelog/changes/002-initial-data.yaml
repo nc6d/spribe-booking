@@ -1,0 +1,344 @@
+databaseChangeLog:
+  - changeSet:
+      id: 2
+      author: system
+      changes:
+        - insert:
+            tableName: units
+            columns:
+              - column:
+                  name: id
+                  value: 550e8400-e29b-41d4-a716-446655440000
+              - column:
+                  name: number_of_rooms
+                  value: 2
+              - column:
+                  name: type
+                  value: APARTMENTS
+              - column:
+                  name: floor
+                  value: 3
+              - column:
+                  name: base_price
+                  value: 100.00
+              - column:
+                  name: total_price
+                  value: 115.00
+              - column:
+                  name: description
+                  value: "Modern apartment in city center"
+              - column:
+                  name: available
+                  valueBoolean: true
+              - column:
+                  name: created_at
+                  value: "2024-03-20 10:00:00"
+              - column:
+                  name: updated_at
+                  value: "2024-03-20 10:00:00"
+
+        - insert:
+            tableName: units
+            columns:
+              - column:
+                  name: id
+                  value: 550e8400-e29b-41d4-a716-446655440001
+              - column:
+                  name: number_of_rooms
+                  value: 3
+              - column:
+                  name: type
+                  value: HOME
+              - column:
+                  name: floor
+                  value: 1
+              - column:
+                  name: base_price
+                  value: 200.00
+              - column:
+                  name: total_price
+                  value: 230.00
+              - column:
+                  name: description
+                  value: "Spacious family home with garden"
+              - column:
+                  name: available
+                  valueBoolean: true
+              - column:
+                  name: created_at
+                  value: "2024-03-20 10:00:00"
+              - column:
+                  name: updated_at
+                  value: "2024-03-20 10:00:00"
+
+        - insert:
+            tableName: units
+            columns:
+              - column:
+                  name: id
+                  value: 550e8400-e29b-41d4-a716-446655440002
+              - column:
+                  name: number_of_rooms
+                  value: 1
+              - column:
+                  name: type
+                  value: FLAT
+              - column:
+                  name: floor
+                  value: 5
+              - column:
+                  name: base_price
+                  value: 80.00
+              - column:
+                  name: total_price
+                  value: 92.00
+              - column:
+                  name: description
+                  value: "Cozy studio flat with city view"
+              - column:
+                  name: available
+                  valueBoolean: true
+              - column:
+                  name: created_at
+                  value: "2024-03-20 10:00:00"
+              - column:
+                  name: updated_at
+                  value: "2024-03-20 10:00:00"
+
+        - insert:
+            tableName: units
+            columns:
+              - column:
+                  name: id
+                  value: 550e8400-e29b-41d4-a716-446655440003
+              - column:
+                  name: number_of_rooms
+                  value: 4
+              - column:
+                  name: type
+                  value: HOME
+              - column:
+                  name: floor
+                  value: 2
+              - column:
+                  name: base_price
+                  value: 250.00
+              - column:
+                  name: total_price
+                  value: 287.50
+              - column:
+                  name: description
+                  value: "Luxury home with pool"
+              - column:
+                  name: available
+                  valueBoolean: true
+              - column:
+                  name: created_at
+                  value: "2024-03-20 10:00:00"
+              - column:
+                  name: updated_at
+                  value: "2024-03-20 10:00:00"
+
+        - insert:
+            tableName: units
+            columns:
+              - column:
+                  name: id
+                  value: 550e8400-e29b-41d4-a716-446655440004
+              - column:
+                  name: number_of_rooms
+                  value: 2
+              - column:
+                  name: type
+                  value: APARTMENTS
+              - column:
+                  name: floor
+                  value: 4
+              - column:
+                  name: base_price
+                  value: 120.00
+              - column:
+                  name: total_price
+                  value: 138.00
+              - column:
+                  name: description
+                  value: "Modern apartment with balcony"
+              - column:
+                  name: available
+                  valueBoolean: true
+              - column:
+                  name: created_at
+                  value: "2024-03-20 10:00:00"
+              - column:
+                  name: updated_at
+                  value: "2024-03-20 10:00:00"
+
+        - insert:
+            tableName: units
+            columns:
+              - column:
+                  name: id
+                  value: 550e8400-e29b-41d4-a716-446655440005
+              - column:
+                  name: number_of_rooms
+                  value: 3
+              - column:
+                  name: type
+                  value: FLAT
+              - column:
+                  name: floor
+                  value: 6
+              - column:
+                  name: base_price
+                  value: 150.00
+              - column:
+                  name: total_price
+                  value: 172.50
+              - column:
+                  name: description
+                  value: "Spacious flat with panoramic views"
+              - column:
+                  name: available
+                  valueBoolean: true
+              - column:
+                  name: created_at
+                  value: "2024-03-20 10:00:00"
+              - column:
+                  name: updated_at
+                  value: "2024-03-20 10:00:00"
+
+        - insert:
+            tableName: units
+            columns:
+              - column:
+                  name: id
+                  value: 550e8400-e29b-41d4-a716-446655440006
+              - column:
+                  name: number_of_rooms
+                  value: 1
+              - column:
+                  name: type
+                  value: APARTMENTS
+              - column:
+                  name: floor
+                  value: 2
+              - column:
+                  name: base_price
+                  value: 90.00
+              - column:
+                  name: total_price
+                  value: 103.50
+              - column:
+                  name: description
+                  value: "Studio apartment in quiet area"
+              - column:
+                  name: available
+                  valueBoolean: true
+              - column:
+                  name: created_at
+                  value: "2024-03-20 10:00:00"
+              - column:
+                  name: updated_at
+                  value: "2024-03-20 10:00:00"
+
+        - insert:
+            tableName: units
+            columns:
+              - column:
+                  name: id
+                  value: 550e8400-e29b-41d4-a716-446655440007
+              - column:
+                  name: number_of_rooms
+                  value: 5
+              - column:
+                  name: type
+                  value: HOME
+              - column:
+                  name: floor
+                  value: 1
+              - column:
+                  name: base_price
+                  value: 300.00
+              - column:
+                  name: total_price
+                  value: 345.00
+              - column:
+                  name: description
+                  value: "Luxury villa with private garden"
+              - column:
+                  name: available
+                  valueBoolean: true
+              - column:
+                  name: created_at
+                  value: "2024-03-20 10:00:00"
+              - column:
+                  name: updated_at
+                  value: "2024-03-20 10:00:00"
+
+        - insert:
+            tableName: units
+            columns:
+              - column:
+                  name: id
+                  value: 550e8400-e29b-41d4-a716-446655440008
+              - column:
+                  name: number_of_rooms
+                  value: 2
+              - column:
+                  name: type
+                  value: FLAT
+              - column:
+                  name: floor
+                  value: 3
+              - column:
+                  name: base_price
+                  value: 110.00
+              - column:
+                  name: total_price
+                  value: 126.50
+              - column:
+                  name: description
+                  value: "Modern flat near city center"
+              - column:
+                  name: available
+                  valueBoolean: true
+              - column:
+                  name: created_at
+                  value: "2024-03-20 10:00:00"
+              - column:
+                  name: updated_at
+                  value: "2024-03-20 10:00:00"
+
+        - insert:
+            tableName: units
+            columns:
+              - column:
+                  name: id
+                  value: 550e8400-e29b-41d4-a716-446655440009
+              - column:
+                  name: number_of_rooms
+                  value: 4
+              - column:
+                  name: type
+                  value: APARTMENTS
+              - column:
+                  name: floor
+                  value: 5
+              - column:
+                  name: base_price
+                  value: 180.00
+              - column:
+                  name: total_price
+                  value: 207.00
+              - column:
+                  name: description
+                  value: "Luxury apartment with city views"
+              - column:
+                  name: available
+                  valueBoolean: true
+              - column:
+                  name: created_at
+                  value: "2024-03-20 10:00:00"
+              - column:
+                  name: updated_at
+                  value: "2024-03-20 10:00:00" 

@@ -1,0 +1,79 @@
+databaseChangeLog:
+  - changeSet:
+      id: 3
+      author: spribe
+      changes:
+        - insert:
+            tableName: users
+            columns:
+              - column:
+                  name: id
+                  value: "550e8400-e29b-41d4-a716-446655440000"
+              - column:
+                  name: email
+                  value: "john.doe@example.com"
+              - column:
+                  name: first_name
+                  value: "John"
+              - column:
+                  name: last_name
+                  value: "Doe"
+              - column:
+                  name: role
+                  value: "USER"
+              - column:
+                  name: created_at
+                  value: "2024-01-01T00:00:00"
+              - column:
+                  name: updated_at
+                  value: "2024-01-01T00:00:00"
+
+        - insert:
+            tableName: users
+            columns:
+              - column:
+                  name: id
+                  value: "550e8400-e29b-41d4-a716-446655440001"
+              - column:
+                  name: email
+                  value: "jane.manager@example.com"
+              - column:
+                  name: first_name
+                  value: "Jane"
+              - column:
+                  name: last_name
+                  value: "Manager"
+              - column:
+                  name: role
+                  value: "MANAGER"
+              - column:
+                  name: created_at
+                  value: "2024-01-01T00:00:00"
+              - column:
+                  name: updated_at
+                  value: "2024-01-01T00:00:00"
+
+        - insert:
+            tableName: users
+            columns:
+              - column:
+                  name: id
+                  value: "550e8400-e29b-41d4-a716-446655440002"
+              - column:
+                  name: email
+                  value: "admin@example.com"
+              - column:
+                  name: first_name
+                  value: "Admin"
+              - column:
+                  name: last_name
+                  value: "User"
+              - column:
+                  name: role
+                  value: "ADMIN"
+              - column:
+                  name: created_at
+                  value: "2024-01-01T00:00:00"
+              - column:
+                  name: updated_at
+                  value: "2024-01-01T00:00:00"
