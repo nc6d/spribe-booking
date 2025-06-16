@@ -1,10 +1,12 @@
 package org.spribe.booking.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.spribe.booking.config.TestContainersConfig;
 import org.spribe.booking.dto.BookingRequest;
 import org.spribe.booking.dto.BookingResponse;
+import org.spribe.booking.dto.PageResponse;
 import org.spribe.booking.model.*;
 import org.spribe.booking.model.enumeration.AccommodationType;
 import org.spribe.booking.model.enumeration.BookingStatus;
@@ -17,11 +19,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.UUID;
@@ -47,6 +53,9 @@ class BookingServiceTest {
 
     @MockBean
     private EventRepository eventRepository;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Value("${booking.payment-timeout:15}")
     private int paymentTimeout;
@@ -110,7 +119,6 @@ class BookingServiceTest {
         when(bookingRepository.save(any(Booking.class))).thenReturn(mockBooking);
         when(eventRepository.save(any(Event.class))).thenReturn(new Event());
 
-
         BookingResponse response = bookingService.createBooking(validBookingRequest, testUserId);
 
         assertNotNull(response);
@@ -172,9 +180,48 @@ class BookingServiceTest {
     }
 
     @Test
+    void confirmBooking_ValidRequest_ReturnsConfirmedBooking() {
+        when(bookingRepository.findById(testBookingId)).thenReturn(Optional.of(mockBooking));
+        when(bookingRepository.save(any(Booking.class))).thenReturn(mockBooking);
+        when(eventRepository.save(any(Event.class))).thenReturn(new Event());
+
+        BookingResponse response = bookingService.confirmBooking(testBookingId, testUserId);
+
+        assertNotNull(response);
+        assertEquals(testBookingId, response.getId());
+        assertEquals(BookingStatus.CONFIRMED, response.getStatus());
+
+        verify(bookingRepository).save(argThat(booking -> 
+            booking.getStatus() == BookingStatus.CONFIRMED));
+        verify(eventRepository).save(argThat(event -> 
+            event.getType() == EventType.BOOKING_CONFIRMED &&
+            event.getEntityId().equals(testBookingId) &&
+            event.getUserId().equals(testUserId)
+        ));
+    }
+
+    @Test
+    void confirmBooking_UnauthorizedUser_ThrowsException() {
+        when(bookingRepository.findById(testBookingId)).thenReturn(Optional.of(mockBooking));
+
+        assertThrows(RuntimeException.class, 
+            () -> bookingService.confirmBooking(testBookingId, UUID.randomUUID()));
+    }
+
+    @Test
+    void confirmBooking_InvalidStatus_ThrowsException() {
+        mockBooking.setStatus(BookingStatus.CONFIRMED);
+        when(bookingRepository.findById(testBookingId)).thenReturn(Optional.of(mockBooking));
+
+        assertThrows(RuntimeException.class, 
+            () -> bookingService.confirmBooking(testBookingId, testUserId));
+    }
+
+    @Test
     void cancelBooking_ValidRequest_ReturnsCancelledBooking() {
         when(bookingRepository.findById(testBookingId)).thenReturn(Optional.of(mockBooking));
         when(bookingRepository.save(any(Booking.class))).thenReturn(mockBooking);
+        when(unitRepository.save(any(Unit.class))).thenReturn(mockUnit);
         when(eventRepository.save(any(Event.class))).thenReturn(new Event());
 
         BookingResponse response = bookingService.cancelBooking(testBookingId, testUserId);
@@ -183,21 +230,14 @@ class BookingServiceTest {
         assertEquals(testBookingId, response.getId());
         assertEquals(BookingStatus.CANCELLED, response.getStatus());
 
+        verify(bookingRepository).save(argThat(booking -> 
+            booking.getStatus() == BookingStatus.CANCELLED));
         verify(unitRepository).save(argThat(Unit::isAvailable));
-        verify(bookingRepository).save(any(Booking.class));
         verify(eventRepository).save(argThat(event -> 
             event.getType() == EventType.BOOKING_CANCELLED &&
             event.getEntityId().equals(testBookingId) &&
             event.getUserId().equals(testUserId)
         ));
-    }
-
-    @Test
-    void cancelBooking_UnauthorizedUser_ThrowsException() {
-        when(bookingRepository.findById(testBookingId)).thenReturn(Optional.of(mockBooking));
-
-        assertThrows(RuntimeException.class, 
-            () -> bookingService.cancelBooking(testBookingId, UUID.randomUUID()));
     }
 
     @Test
@@ -210,6 +250,26 @@ class BookingServiceTest {
     }
 
     @Test
+    void getUserBookings_ReturnsPaginatedBookings() {
+        Page<Booking> bookingPage = new PageImpl<>(Collections.singletonList(mockBooking));
+        when(bookingRepository.findByUserId(any(UUID.class), any(PageRequest.class)))
+                .thenReturn(bookingPage);
+
+        PageResponse<BookingResponse> response = bookingService.getUserBookings(testUserId, 0, 10);
+
+        assertNotNull(response);
+        assertEquals(1, response.getContent().size());
+        assertEquals(1, response.getTotalElements());
+        assertEquals(1, response.getTotalPages());
+        assertTrue(response.isLast());
+
+        BookingResponse bookingResponse = response.getContent().get(0);
+        assertEquals(testBookingId, bookingResponse.getId());
+        assertEquals(testUnitId, bookingResponse.getUnitId());
+        assertEquals(testUserId, bookingResponse.getUserId());
+    }
+
+    @Test
     void processExpiredBookings_ExpiredBookings_CancelsBookings() {
         mockBooking.setPaymentDeadline(now.minusMinutes(1));
         when(bookingRepository.findExpiredBookings(eq(BookingStatus.PENDING_PAYMENT), any(LocalDateTime.class)))
@@ -217,7 +277,6 @@ class BookingServiceTest {
         when(bookingRepository.save(any(Booking.class))).thenReturn(mockBooking);
         when(unitRepository.save(any(Unit.class))).thenReturn(mockUnit);
         when(eventRepository.save(any(Event.class))).thenReturn(new Event());
-
 
         bookingService.processExpiredBookings();
 
@@ -229,5 +288,74 @@ class BookingServiceTest {
             event.getEntityId().equals(testBookingId) &&
             event.getUserId().equals(testUserId)
         ));
+    }
+
+    @Test
+    void processCompletedBookings_CompletedBookings_UpdatesStatusAndUnitAvailability() {
+        mockBooking.setStatus(BookingStatus.CONFIRMED);
+        mockBooking.setCheckOutDate(now.minusDays(1)); // Past checkout date
+        when(bookingRepository.findCompletedBookings(eq(BookingStatus.CONFIRMED), any(LocalDateTime.class)))
+                .thenReturn(Collections.singletonList(mockBooking));
+        when(bookingRepository.save(any(Booking.class))).thenReturn(mockBooking);
+        when(unitRepository.save(any(Unit.class))).thenReturn(mockUnit);
+        when(eventRepository.save(any(Event.class))).thenReturn(new Event());
+
+        bookingService.processCompletedBookings();
+
+        verify(bookingRepository).save(argThat(booking ->
+            booking.getStatus() == BookingStatus.COMPLETED));
+        verify(unitRepository).save(argThat(Unit::isAvailable));
+        verify(eventRepository).save(argThat(event -> 
+            event.getType() == EventType.BOOKING_COMPLETED &&
+            event.getEntityId().equals(testBookingId) &&
+            event.getUserId().equals(testUserId)
+        ));
+    }
+
+    @Test
+    void processCompletedBookings_NoCompletedBookings_DoesNothing() {
+        when(bookingRepository.findCompletedBookings(eq(BookingStatus.CONFIRMED), any(LocalDateTime.class)))
+                .thenReturn(Collections.emptyList());
+
+        bookingService.processCompletedBookings();
+
+        verify(bookingRepository, never()).save(any(Booking.class));
+        verify(unitRepository, never()).save(any(Unit.class));
+        verify(eventRepository, never()).save(any(Event.class));
+    }
+
+    @Test
+    void processCompletedBookings_MultipleCompletedBookings_UpdatesAll() {
+        Booking booking1 = Booking.builder()
+                .id(UUID.randomUUID())
+                .unit(mockUnit)
+                .userId(testUserId)
+                .checkInDate(now.minusDays(3))
+                .checkOutDate(now.minusDays(1))
+                .status(BookingStatus.CONFIRMED)
+                .build();
+
+        Booking booking2 = Booking.builder()
+                .id(UUID.randomUUID())
+                .unit(mockUnit)
+                .userId(testUserId)
+                .checkInDate(now.minusDays(2))
+                .checkOutDate(now.minusDays(1))
+                .status(BookingStatus.CONFIRMED)
+                .build();
+
+        when(bookingRepository.findCompletedBookings(eq(BookingStatus.CONFIRMED), any(LocalDateTime.class)))
+                .thenReturn(Arrays.asList(booking1, booking2));
+        when(bookingRepository.save(any(Booking.class))).thenReturn(booking1, booking2);
+        when(unitRepository.save(any(Unit.class))).thenReturn(mockUnit);
+        when(eventRepository.save(any(Event.class))).thenReturn(new Event());
+
+        bookingService.processCompletedBookings();
+
+        verify(bookingRepository, times(2)).save(argThat(booking ->
+            booking.getStatus() == BookingStatus.COMPLETED));
+        verify(unitRepository, times(2)).save(argThat(Unit::isAvailable));
+        verify(eventRepository, times(2)).save(argThat(event -> 
+            event.getType() == EventType.BOOKING_COMPLETED));
     }
 } 

@@ -26,6 +26,12 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
             @Param("checkOutDate") LocalDateTime checkOutDate
     );
 
+    @Query("SELECT b FROM Booking b WHERE b.status = :status AND b.checkOutDate <= :now")
+    List<Booking> findCompletedBookings(
+            @Param("status") BookingStatus status,
+            @Param("now") LocalDateTime now
+    );
+
     @Query("SELECT b FROM Booking b WHERE b.status = :status AND b.paymentDeadline < :now")
     List<Booking> findExpiredBookings(
             @Param("status") BookingStatus status,

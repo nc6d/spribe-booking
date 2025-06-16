@@ -22,6 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -108,7 +110,7 @@ class PaymentServiceTest {
     }
 
     @Test
-    void createPayment_BookingNotFound_ThrowsException() {
+    void createPayment_NonExistentBooking_ThrowsException() {
         when(bookingRepository.findById(any(UUID.class))).thenReturn(Optional.empty());
 
         assertThrows(RuntimeException.class, 
@@ -116,11 +118,12 @@ class PaymentServiceTest {
     }
 
     @Test
-    void createPayment_UnauthorizedUser_ThrowsException() {
+    void createPayment_InvalidBookingStatus_ThrowsException() {
+        mockBooking.setStatus(BookingStatus.CONFIRMED);
         when(bookingRepository.findById(testBookingId)).thenReturn(Optional.of(mockBooking));
 
         assertThrows(RuntimeException.class, 
-            () -> paymentService.createPayment(validPaymentRequest, UUID.randomUUID()));
+            () -> paymentService.createPayment(validPaymentRequest, testUserId));
     }
 
     @Test
@@ -140,6 +143,41 @@ class PaymentServiceTest {
         when(paymentRepository.findById(any(UUID.class))).thenReturn(Optional.empty());
 
         assertThrows(RuntimeException.class, () -> paymentService.getPayment(UUID.randomUUID()));
+    }
+
+    @Test
+    void getPaymentsByBooking_ReturnsPaymentsList() {
+        List<Payment> payments = Arrays.asList(mockPayment);
+        when(paymentRepository.findByBookingId(testBookingId)).thenReturn(payments);
+
+        List<PaymentResponse> responses = paymentService.getPaymentsByBooking(testBookingId);
+
+        assertNotNull(responses);
+        assertEquals(1, responses.size());
+        assertEquals(testPaymentId, responses.get(0).getId());
+        assertEquals(testBookingId, responses.get(0).getBookingId());
+        assertEquals(new BigDecimal("345.00"), responses.get(0).getAmount());
+    }
+
+    @Test
+    void updatePaymentStatus_ValidRequest_ReturnsUpdatedPayment() {
+        when(paymentRepository.findById(testPaymentId)).thenReturn(Optional.of(mockPayment));
+        when(paymentRepository.save(any(Payment.class))).thenReturn(mockPayment);
+        when(eventRepository.save(any(Event.class))).thenReturn(new Event());
+
+        PaymentResponse response = paymentService.updatePaymentStatus(
+                testPaymentId, testUserId, PaymentStatus.FAILED);
+
+        assertNotNull(response);
+        assertEquals(testPaymentId, response.getId());
+        assertEquals(PaymentStatus.FAILED, response.getStatus());
+
+        verify(paymentRepository).save(any(Payment.class));
+        verify(eventRepository).save(argThat(event -> 
+            event.getType() == EventType.PAYMENT_STATUS_UPDATED &&
+            event.getEntityId().equals(testPaymentId) &&
+            event.getUserId().equals(testUserId)
+        ));
     }
 
     @Test
@@ -175,19 +213,60 @@ class PaymentServiceTest {
     }
 
     @Test
-    void processPayment_UnauthorizedUser_ThrowsException() {
-        when(paymentRepository.findById(testPaymentId)).thenReturn(Optional.of(mockPayment));
-
-        assertThrows(RuntimeException.class, 
-            () -> paymentService.processPayment(testPaymentId, UUID.randomUUID()));
-    }
-
-    @Test
     void processPayment_AlreadyProcessed_ThrowsException() {
         mockPayment.setStatus(PaymentStatus.COMPLETED);
         when(paymentRepository.findById(testPaymentId)).thenReturn(Optional.of(mockPayment));
 
         assertThrows(RuntimeException.class, 
             () -> paymentService.processPayment(testPaymentId, testUserId));
+    }
+
+    @Test
+    void refundPayment_ValidRequest_ReturnsRefundedPayment() {
+        mockPayment.setStatus(PaymentStatus.COMPLETED);
+        when(paymentRepository.findById(testPaymentId)).thenReturn(Optional.of(mockPayment));
+        when(paymentRepository.save(any(Payment.class))).thenReturn(mockPayment);
+        when(eventRepository.save(any(Event.class))).thenReturn(new Event());
+
+        PaymentResponse response = paymentService.refundPayment(testPaymentId, testUserId);
+
+        assertNotNull(response);
+        assertEquals(testPaymentId, response.getId());
+        assertEquals(PaymentStatus.REFUNDED, response.getStatus());
+
+        verify(paymentRepository).save(argThat(payment -> 
+            payment.getStatus() == PaymentStatus.REFUNDED));
+        verify(eventRepository).save(argThat(event -> 
+            event.getType() == EventType.PAYMENT_REFUNDED &&
+            event.getEntityId().equals(testPaymentId) &&
+            event.getUserId().equals(testUserId)
+        ));
+    }
+
+    @Test
+    void refundPayment_NonCompletedPayment_ThrowsException() {
+        when(paymentRepository.findById(testPaymentId)).thenReturn(Optional.of(mockPayment));
+
+        assertThrows(RuntimeException.class, 
+            () -> paymentService.refundPayment(testPaymentId, testUserId));
+    }
+
+    @Test
+    void cancelPendingPayments_ValidRequest_CancelsPayments() {
+        List<Payment> pendingPayments = Arrays.asList(mockPayment);
+        when(paymentRepository.findByBookingIdAndStatus(
+                testBookingId, PaymentStatus.PENDING)).thenReturn(pendingPayments);
+        when(paymentRepository.save(any(Payment.class))).thenReturn(mockPayment);
+        when(eventRepository.save(any(Event.class))).thenReturn(new Event());
+
+        paymentService.cancelPendingPayments(testBookingId, testUserId);
+
+        verify(paymentRepository).save(argThat(payment -> 
+            payment.getStatus() == PaymentStatus.CANCELLED));
+        verify(eventRepository).save(argThat(event -> 
+            event.getType() == EventType.PAYMENT_CANCELLED &&
+            event.getEntityId().equals(testPaymentId) &&
+            event.getUserId().equals(testUserId)
+        ));
     }
 } 

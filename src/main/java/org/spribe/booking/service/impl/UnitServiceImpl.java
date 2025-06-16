@@ -13,6 +13,7 @@ import org.spribe.booking.model.Unit;
 import org.spribe.booking.repository.EventRepository;
 import org.spribe.booking.repository.UnitRepository;
 import org.spribe.booking.service.UnitService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -20,6 +21,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,6 +33,9 @@ public class UnitServiceImpl implements UnitService {
     private final UnitRepository unitRepository;
     private final EventRepository eventRepository;
     private final ObjectMapper objectMapper;
+
+    @Value("${booking.system-markup:15}")
+    private int systemMarkup;
 
     @Override
     @Transactional
@@ -42,6 +48,9 @@ public class UnitServiceImpl implements UnitService {
                 .type(request.getType())
                 .floor(request.getFloor())
                 .basePrice(request.getBasePrice())
+                .totalPrice(request.getBasePrice()
+                        .multiply(BigDecimal.valueOf(1 + systemMarkup / 100.0))
+                        .setScale(2, RoundingMode.HALF_UP))
                 .description(request.getDescription())
                 .available(true)
                 .build();
@@ -127,8 +136,8 @@ public class UnitServiceImpl implements UnitService {
                 request.getNumberOfRooms(),
                 request.getType(),
                 request.getFloor(),
-                request.getMinPrice().doubleValue(),
-                request.getMaxPrice().doubleValue(),
+                request.getMinPrice() != null? request.getMinPrice().doubleValue() : null,
+                request.getMaxPrice() != null? request.getMaxPrice().doubleValue() : null,
                 request.getCheckInDate(),
                 request.getCheckOutDate(),
                 PageRequest.of(request.getPage(), request.getSize())

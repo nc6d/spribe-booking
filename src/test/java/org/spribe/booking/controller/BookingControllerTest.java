@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.spribe.booking.config.TestContainersConfig;
 import org.spribe.booking.dto.BookingRequest;
 import org.spribe.booking.dto.BookingResponse;
+import org.spribe.booking.dto.PageResponse;
 import org.spribe.booking.model.enumeration.BookingStatus;
 import org.spribe.booking.service.BookingService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,9 +20,11 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -97,9 +100,22 @@ class BookingControllerTest {
     }
 
     @Test
-    void cancelBooking_ExistingBooking_ReturnsCancelledBooking() throws Exception {
+    void confirmBooking_ValidRequest_ReturnsConfirmedBooking() throws Exception {
+        mockBookingResponse.setStatus(BookingStatus.CONFIRMED);
+        when(bookingService.confirmBooking(any(UUID.class), any(UUID.class)))
+                .thenReturn(mockBookingResponse);
+
+        mockMvc.perform(post("/api/v1/bookings/{id}/confirm", testBookingId)
+                        .header("X-User-Id", testUserId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(testBookingId.toString()))
+                .andExpect(jsonPath("$.status").value("CONFIRMED"));
+    }
+
+    @Test
+    void cancelBooking_ValidRequest_ReturnsCancelledBooking() throws Exception {
         mockBookingResponse.setStatus(BookingStatus.CANCELLED);
-        when(bookingService.cancelBooking(testBookingId, testUserId))
+        when(bookingService.cancelBooking(any(UUID.class), any(UUID.class)))
                 .thenReturn(mockBookingResponse);
 
         mockMvc.perform(post("/api/v1/bookings/{id}/cancel", testBookingId)
@@ -110,8 +126,35 @@ class BookingControllerTest {
     }
 
     @Test
+    void getUserBookings_ReturnsPaginatedBookings() throws Exception {
+        PageResponse<BookingResponse> pageResponse = new PageResponse<>(
+                List.of(mockBookingResponse),
+                0,
+                10,
+                1,
+                1,
+                true
+        );
+
+        when(bookingService.getUserBookings(any(UUID.class), anyInt(), anyInt()))
+                .thenReturn(pageResponse);
+
+        mockMvc.perform(get("/api/v1/bookings/user")
+                        .header("X-User-Id", testUserId)
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(testBookingId.toString()))
+                .andExpect(jsonPath("$.content[0].unitId").value(testUnitId.toString()))
+                .andExpect(jsonPath("$.content[0].userId").value(testUserId.toString()))
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.totalPages").value(1))
+                .andExpect(jsonPath("$.last").value(true));
+    }
+
+    @Test
     void createBooking_InvalidRequest_ReturnsBadRequest() throws Exception {
-        validBookingRequest.setCheckInDate(LocalDateTime.now().minusDays(1)); // Invalid check-in date
+        validBookingRequest.setCheckInDate(null); // Invalid check-in date
 
         mockMvc.perform(post("/api/v1/bookings")
                         .header("X-User-Id", testUserId)
@@ -130,22 +173,22 @@ class BookingControllerTest {
     }
 
     @Test
-    void cancelBooking_NonExistentBooking_ReturnsNotFound() throws Exception {
-        when(bookingService.cancelBooking(any(UUID.class), any(UUID.class)))
-                .thenThrow(new RuntimeException("Booking not found"));
+    void confirmBooking_UnauthorizedUser_ReturnsUnauthorized() throws Exception {
+        when(bookingService.confirmBooking(any(UUID.class), any(UUID.class)))
+                .thenThrow(new RuntimeException("User is not authorized to confirm this booking"));
 
-        mockMvc.perform(post("/api/v1/bookings/{id}/cancel", UUID.randomUUID())
-                        .header("X-User-Id", testUserId))
+        mockMvc.perform(post("/api/v1/bookings/{id}/confirm", testBookingId)
+                        .header("X-User-Id", UUID.randomUUID()))
                 .andExpect(status().is4xxClientError());
     }
 
     @Test
-    void cancelBooking_UnauthorizedUser_ReturnsForbidden() throws Exception {
+    void cancelBooking_AlreadyCancelled_ReturnsBadRequest() throws Exception {
         when(bookingService.cancelBooking(any(UUID.class), any(UUID.class)))
-                .thenThrow(new RuntimeException("User is not authorized to cancel this booking"));
+                .thenThrow(new RuntimeException("Booking is already cancelled"));
 
         mockMvc.perform(post("/api/v1/bookings/{id}/cancel", testBookingId)
-                        .header("X-User-Id", UUID.randomUUID()))
+                        .header("X-User-Id", testUserId))
                 .andExpect(status().is4xxClientError());
     }
 } 

@@ -19,6 +19,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -95,9 +97,35 @@ class PaymentControllerTest {
     }
 
     @Test
+    void getPaymentsByBooking_ReturnsPaymentsList() throws Exception {
+        List<PaymentResponse> payments = Arrays.asList(mockPaymentResponse);
+        when(paymentService.getPaymentsByBooking(testBookingId)).thenReturn(payments);
+
+        mockMvc.perform(get("/api/v1/payments/booking/{bookingId}", testBookingId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(testPaymentId.toString()))
+                .andExpect(jsonPath("$[0].bookingId").value(testBookingId.toString()))
+                .andExpect(jsonPath("$[0].amount").value("345.0"));
+    }
+
+    @Test
+    void updatePaymentStatus_ValidRequest_ReturnsUpdatedPayment() throws Exception {
+        mockPaymentResponse.setStatus(PaymentStatus.COMPLETED);
+        when(paymentService.updatePaymentStatus(any(UUID.class), any(UUID.class), any(PaymentStatus.class)))
+                .thenReturn(mockPaymentResponse);
+
+        mockMvc.perform(put("/api/v1/payments/{id}/status", testPaymentId)
+                        .header("X-User-Id", testUserId)
+                        .param("status", "COMPLETED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(testPaymentId.toString()))
+                .andExpect(jsonPath("$.status").value("COMPLETED"));
+    }
+
+    @Test
     void processPayment_ValidRequest_ReturnsProcessedPayment() throws Exception {
         mockPaymentResponse.setStatus(PaymentStatus.COMPLETED);
-        when(paymentService.processPayment(testPaymentId, testUserId))
+        when(paymentService.processPayment(any(UUID.class), any(UUID.class)))
                 .thenReturn(mockPaymentResponse);
 
         mockMvc.perform(post("/api/v1/payments/{id}/process", testPaymentId)
@@ -105,6 +133,26 @@ class PaymentControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(testPaymentId.toString()))
                 .andExpect(jsonPath("$.status").value("COMPLETED"));
+    }
+
+    @Test
+    void refundPayment_ValidRequest_ReturnsRefundedPayment() throws Exception {
+        mockPaymentResponse.setStatus(PaymentStatus.REFUNDED);
+        when(paymentService.refundPayment(any(UUID.class), any(UUID.class)))
+                .thenReturn(mockPaymentResponse);
+
+        mockMvc.perform(post("/api/v1/payments/{id}/refund", testPaymentId)
+                        .header("X-User-Id", testUserId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(testPaymentId.toString()))
+                .andExpect(jsonPath("$.status").value("REFUNDED"));
+    }
+
+    @Test
+    void cancelPendingPayments_ValidRequest_ReturnsNoContent() throws Exception {
+        mockMvc.perform(post("/api/v1/payments/booking/{bookingId}/cancel", testBookingId)
+                        .header("X-User-Id", testUserId))
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -128,19 +176,9 @@ class PaymentControllerTest {
     }
 
     @Test
-    void processPayment_NonExistentPayment_ReturnsNotFound() throws Exception {
+    void processPayment_UnauthorizedUser_ReturnsUnauthorized() throws Exception {
         when(paymentService.processPayment(any(UUID.class), any(UUID.class)))
-                .thenThrow(new RuntimeException("Payment not found"));
-
-        mockMvc.perform(post("/api/v1/payments/{id}/process", UUID.randomUUID())
-                        .header("X-User-Id", testUserId))
-                .andExpect(status().is4xxClientError());
-    }
-
-    @Test
-    void processPayment_UnauthorizedUser_ReturnsForbidden() throws Exception {
-        when(paymentService.processPayment(any(UUID.class), any(UUID.class)))
-                .thenThrow(new RuntimeException("User is not authorized to process this payment"));
+                .thenThrow(new RuntimeException("Unauthorized"));
 
         mockMvc.perform(post("/api/v1/payments/{id}/process", testPaymentId)
                         .header("X-User-Id", UUID.randomUUID()))

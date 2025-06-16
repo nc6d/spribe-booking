@@ -54,7 +54,6 @@ public class Unit {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
-        totalPrice = basePrice.multiply(new BigDecimal("1.15")); // 15% markup
     }
 
     @PreUpdate

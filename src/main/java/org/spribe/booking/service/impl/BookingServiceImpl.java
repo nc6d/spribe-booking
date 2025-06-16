@@ -245,4 +245,36 @@ public class BookingServiceImpl implements BookingService {
             eventRepository.save(event);
         }
     }
+
+    @Override
+    @Transactional
+    @Scheduled(fixedRate = 60000) // Run every minute
+    public void processCompletedBookings() {
+        log.info("Processing completed bookings");
+        LocalDateTime now = LocalDateTime.now();
+
+        List<Booking> completedBookings = bookingRepository.findCompletedBookings(
+                BookingStatus.CONFIRMED, now);
+
+        for (Booking booking : completedBookings) {
+            log.info("Processing completed booking: {}", booking.getId());
+            
+            booking.setStatus(BookingStatus.COMPLETED);
+            bookingRepository.save(booking);
+
+            Unit unit = booking.getUnit();
+            unit.setAvailable(true);
+            unitRepository.save(unit);
+
+            // Create event
+            Event event = Event.builder()
+                    .type(EventType.BOOKING_COMPLETED)
+                    .userId(booking.getUserId())
+                    .entityId(booking.getId())
+                    .description("Booking completed for unit: " + unit.getId())
+                    .build();
+            
+            eventRepository.save(event);
+        }
+    }
 } 

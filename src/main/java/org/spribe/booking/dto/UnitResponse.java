@@ -1,6 +1,7 @@
 package org.spribe.booking.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Builder;
 import lombok.Data;
 import org.spribe.booking.model.enumeration.AccommodationType;
 

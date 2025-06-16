@@ -1,5 +1,6 @@
 package org.spribe.booking.service.impl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.spribe.booking.dto.PaymentRequest;
@@ -26,6 +27,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentRepository paymentRepository;
     private final BookingRepository bookingRepository;
     private final EventRepository eventRepository;
+    private final ObjectMapper objectMapper;
 
     @Override
     @Transactional
@@ -58,7 +60,7 @@ public class PaymentServiceImpl implements PaymentService {
         
         eventRepository.save(event);
         
-        return mapToResponse(payment);
+        return objectMapper.convertValue(payment, PaymentResponse.class);
     }
 
     @Override
@@ -69,7 +71,7 @@ public class PaymentServiceImpl implements PaymentService {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new RuntimeException("Payment not found"));
         
-        return mapToResponse(payment);
+        return objectMapper.convertValue(payment, PaymentResponse.class);
     }
 
     @Override
@@ -78,7 +80,7 @@ public class PaymentServiceImpl implements PaymentService {
         log.info("Getting payments for booking: {}", bookingId);
         
         return paymentRepository.findByBookingId(bookingId).stream()
-                .map(this::mapToResponse)
+                .map(payment -> objectMapper.convertValue(payment, PaymentResponse.class))
                 .collect(Collectors.toList());
     }
 
@@ -103,7 +105,7 @@ public class PaymentServiceImpl implements PaymentService {
         
         eventRepository.save(event);
         
-        return mapToResponse(payment);
+        return objectMapper.convertValue(payment, PaymentResponse.class);
     }
 
     @Override
@@ -137,7 +139,7 @@ public class PaymentServiceImpl implements PaymentService {
         
         eventRepository.save(event);
         
-        return mapToResponse(payment);
+        return objectMapper.convertValue(payment, PaymentResponse.class);
     }
 
     @Override
@@ -164,7 +166,7 @@ public class PaymentServiceImpl implements PaymentService {
         
         eventRepository.save(event);
         
-        return mapToResponse(payment);
+        return objectMapper.convertValue(payment, PaymentResponse.class);
     }
 
     @Override
@@ -188,18 +190,5 @@ public class PaymentServiceImpl implements PaymentService {
             
             eventRepository.save(event);
         }
-    }
-
-    private PaymentResponse mapToResponse(Payment payment) {
-        PaymentResponse response = new PaymentResponse();
-        response.setId(payment.getId());
-        response.setBookingId(payment.getBooking().getId());
-        response.setAmount(payment.getAmount());
-        response.setStatus(payment.getStatus());
-        response.setPaymentMethod(payment.getPaymentMethod());
-        response.setTransactionId(payment.getTransactionId());
-        response.setCreatedAt(payment.getCreatedAt());
-        response.setUpdatedAt(payment.getUpdatedAt());
-        return response;
     }
 } 

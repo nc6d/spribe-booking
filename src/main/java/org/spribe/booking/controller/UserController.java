@@ -2,11 +2,13 @@ package org.spribe.booking.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.spribe.booking.dto.PageResponse;
 import org.spribe.booking.dto.UserRequest;
 import org.spribe.booking.dto.UserResponse;
 import org.spribe.booking.service.UserService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -20,7 +22,7 @@ public class UserController {
 
     @Operation(summary = "Create a new user", description = "Creates a new user with the provided details")
     @PostMapping
-    public UserResponse createUser(@RequestBody UserRequest request) {
+    public UserResponse createUser(@RequestBody @Valid UserRequest request) {
         return userService.createUser(request);
     }
 
@@ -32,14 +34,15 @@ public class UserController {
 
     @Operation(summary = "Update user", description = "Updates an existing user's details")
     @PutMapping("/{id}")
-    public UserResponse updateUser(@PathVariable UUID id, @RequestBody UserRequest request) {
+    public UserResponse updateUser(@PathVariable UUID id, @Valid @RequestBody UserRequest request) {
         return userService.updateUser(id, request);
     }
 
     @Operation(summary = "Delete user", description = "Deletes a user by their ID")
     @DeleteMapping("/{id}")
-    public void deleteUser(@PathVariable UUID id) {
+    public ResponseEntity<Void> deleteUser(@PathVariable UUID id) {
         userService.deleteUser(id);
+        return ResponseEntity.noContent().build();
     }
 
     @Operation(summary = "Get all users", description = "Retrieves a paginated list of all users")
