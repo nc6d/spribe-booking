@@ -4,6 +4,7 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.CacheManager;
+import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -27,13 +28,11 @@ public class CacheRecoveryService {
         log.info("Starting cache recovery process");
 
         try {
-            // Check if Redis is available
             if (!isRedisAvailable()) {
                 log.warn("Redis is not available, skipping cache recovery");
                 return;
             }
 
-            // Get the actual count from the database
             Long actualCount = unitRepository.countAvailableUnits();
             log.info("Actual available units count from database: {}", actualCount);
 
@@ -48,7 +47,6 @@ public class CacheRecoveryService {
 
             log.info("Current cached count: {}", cachedCount);
 
-            // Update the cache with the actual count
             cacheManager.getCache("availableUnits").put("count", actualCount);
             log.info("Cache recovered successfully with count: {}", actualCount);
         } catch (Exception e) {
@@ -57,12 +55,12 @@ public class CacheRecoveryService {
     }
 
     private boolean isRedisAvailable() {
-        try {
-            redisConnectionFactory.getConnection().ping();
-            return true;
+        try (RedisConnection connection = redisConnectionFactory.getConnection()) {
+            return "PONG".equals(connection.ping());
         } catch (Exception e) {
             log.error("Redis connection error: {}", e.getMessage());
             return false;
         }
     }
+
 }

@@ -14,11 +14,13 @@ import org.spribe.booking.repository.UnitRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -41,10 +43,18 @@ class UnitServiceTest {
     @MockBean
     private EventRepository eventRepository;
 
+    @Autowired
+    private CacheManager cacheManager;
+
     private UnitRequest validUnitRequest;
     private Unit mockUnit;
     private UUID testUserId;
     private UUID testUnitId;
+
+    @BeforeEach
+    void clearCache() {
+        Objects.requireNonNull(cacheManager.getCache("availableUnits")).clear();
+    }
 
     @BeforeEach
     void setUp() {
@@ -158,6 +168,21 @@ class UnitServiceTest {
         assertEquals(100L, count);
         verify(unitRepository).countAvailableUnits();
     }
+    @Test
+    void getAvailableUnitsCount_CachesResultAfterFirstCall() {
+        when(unitRepository.countAvailableUnits()).thenReturn(100L);
+
+        // 1st call should hit the DB, and 2nd call should use cache
+        long firstCall = unitService.getAvailableUnitsCount();
+        long secondCall = unitService.getAvailableUnitsCount();
+
+        assertEquals(100L, firstCall);
+        assertEquals(100L, secondCall);
+
+        verify(unitRepository, times(1)).countAvailableUnits();
+    }
+
+
 
     @Test
     void createUnit_InvalidRequest_ThrowsException() {
